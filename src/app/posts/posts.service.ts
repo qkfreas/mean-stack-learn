@@ -4,6 +4,8 @@ import { map } from 'rxjs/operators';
 
 import { Post } from './posts.model';
 import { HttpClient } from '@angular/common/http';
+import { response } from 'express';
+import { Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
 export class PostsService {
@@ -11,32 +13,36 @@ export class PostsService {
   private postsUpdated = new Subject<Post[]>();
   private url = 'http://localhost:3000/api/posts';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   getPosts() {
     this.http
-      .get<{ message: string; posts: any }>(this.url)
+      .get<{ message: string; posts: any }>("http://localhost:3000/api/posts")
       .pipe(
-        map((postData) => {
-          // Mapping the _id from Mongo to our id column
-          return postData.posts.map((post) => {
+        map(postData => {
+          return postData.posts.map(post => {
             return {
               title: post.title,
               content: post.content,
-              id: post._id,
+              id: post._id
             };
           });
         })
       )
-      .subscribe((transformedPosts) => {
+      .subscribe(transformedPosts => {
         this.posts = transformedPosts;
-        // This copies the array instead of creating a reference.
         this.postsUpdated.next([...this.posts]);
       });
   }
 
   getPostUpdateListener() {
     return this.postsUpdated.asObservable();
+  }
+
+  getPost(id: string) {
+    return this.http.get<{_id: string, title: string, content: string}>(
+      'http://localhost:3000/api/posts/' + id
+    );
   }
 
   addPost(title: string, content: string) {
@@ -48,6 +54,20 @@ export class PostsService {
         post.id = id;
         this.posts.push(post);
         this.postsUpdated.next([...this.posts]);
+        this.router.navigate(["/"]);
+      });
+  }
+
+  updatePost(id: string, title: string, content: string) {
+    const post: Post = { id: id, title: title, content: content};
+    this.http.put('http://localhost:3000/api/posts/' + id, post)
+      .subscribe(response => {
+        const updatedPosts = [...this.posts];
+        const oldPostIndex = updatedPosts.findIndex(p => p.id === post.id);
+        updatedPosts[oldPostIndex] = post;
+        this.posts = updatedPosts;
+        this.postsUpdated.next([...this.posts]);
+        this.router.navigate(["/"]);
       });
   }
 
