@@ -9,7 +9,7 @@ const userRoutes = require("./routes/user");
 const app = express();
 
 const user = "api_user";
-const password = "Garhumv7Gn5LLRCG";
+const password = process.env.MONGO_ATLAS_PW;
 const url = "cluster0.v6l03oq.mongodb.net";
 const database = "angular";
 
